@@ -2,15 +2,14 @@ using ModelContextProtocol.Server;
 using System.ComponentModel;
 using System.Text.Json;
 using MySqlConnector;
-using SimpleMcpHttpServer.Models; // Importamos los modelos
-using SimpleMcpHttpServer.Utils;  // Importamos Config y SqlUtils
+using SimpleMcpHttpServer.Models; 
+using SimpleMcpHttpServer.Utils;  
 
 namespace SimpleMcpHttpServer.Tools;
 
 [McpServerToolType]
 public static class BancosTools
 {
-    // Diccionario de mapping amigable -> columna BD (Igual que en Node)
     public static readonly Dictionary<string, string> ColumnMap = new(StringComparer.OrdinalIgnoreCase)
     {
         { "fecha_emision", "MBAN_FECEMI" },
@@ -118,11 +117,11 @@ OPERADORES PERMITIDOS:
 
         int cantidadReal = req.Cantidad; 
         
-        // 1. Resolver columnas y partes iniciales de la consulta
+       
         string dbColumna = ColumnMap.GetValueOrDefault(req.Columna, req.Columna.ToUpper());
         string distinctKeyword = req.Distinct ? "DISTINCT " : "";
         
-        // Lógica simplificada de selección (Si necesitas la lógica compleja de agregaciones, se expande aquí)
+       
         string selectPart = "*"; 
         
         if (req.SeleccionarColumnas != null && req.SeleccionarColumnas.Length > 0)
@@ -137,7 +136,6 @@ OPERADORES PERMITIDOS:
 
         string sql = $"SELECT {distinctKeyword}{selectPart} FROM vista_movimientos_bancos";
 
-        // 2. Aplicar Filtros (Cláusula WHERE dinámica usando SqlUtils)
         if (req.Filtros.HasValue)
         {
             int paramCounter = 0; // Se pasa por referencia para generar @p0, @p1, etc.
@@ -149,11 +147,9 @@ OPERADORES PERMITIDOS:
             }
         }
 
-        // 3. Ordenamiento Seguro
         string ordenSeguro = req.Orden.ToUpper() == "ASC" ? "ASC" : "DESC";
         sql += $" ORDER BY {dbColumna} {ordenSeguro}";
 
-        // 4. Paginación (Solo si no hay agregaciones complejas que lo impidan)
         if (req.Agregaciones == null || req.Agregaciones.Length == 0)
         {
             sql += " LIMIT @limit OFFSET @offset";
@@ -169,7 +165,6 @@ OPERADORES PERMITIDOS:
             Console.WriteLine($"  {p.ParameterName} = {p.Value}");
         }
 
-        // 5. Ejecutar y mapear
         var resultados = new List<Dictionary<string, object>>();
         using var reader = await command.ExecuteReaderAsync();
         
