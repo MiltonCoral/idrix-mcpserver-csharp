@@ -1,34 +1,19 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace SimpleMcpHttpServer.Models;
 
-public class BancosRequest
+public class VentasRequest
 {
     public int Pagina { get; set; } = 1;
-    public int Cantidad { get; set; } = 100;
+    public int? Cantidad { get; set; }
     public string Orden { get; set; } = "DESC";
-    public string Columna { get; set; } = "fecha_emision";
+    public string Columna { get; set; } = "fecha";
 
     public JsonElement? Filtros { get; set; }
-
     public JsonElement? Agrupacion { get; set; }
     public Agregacion[]? Agregaciones { get; set; }
     public FiltroSimple? Having { get; set; }
     public bool Distinct { get; set; } = false;
     public CampoCalculado[]? CamposCalculados { get; set; }
     public string[]? SeleccionarColumnas { get; set; }
-}
-
-public class Agregacion
-{
-    public string Operacion { get; set; } = string.Empty;
-    public string Columna { get; set; } = string.Empty;
-    public string? Alias { get; set; }
-}
-
-public class CampoCalculado
-{
-    public string Expresion { get; set; } = string.Empty;
-    public string Alias { get; set; } = string.Empty;
 }

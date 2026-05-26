@@ -1,6 +1,7 @@
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using MySqlConnector;
 using SimpleMcpHttpServer.Models;
 using SimpleMcpHttpServer.Utils;
@@ -12,16 +13,16 @@ public static class ClientesTools
 {
     public static readonly Dictionary<string, string> ColumnMap = new(StringComparer.OrdinalIgnoreCase)
     {
-        { "cliente", "CLIENTE" },
-        { "genero", "GENERO" },
-        { "tipo_cliente", "TIPO_CLIENTE" },
-        { "zona", "ZONA" },
-        { "tipo_persona", "TIPO_PERSONA" },
-        { "fecha_registro", "FECHA_REGISTRO" },
-        { "fecha_nacimiento", "FECHA_NACIMIENTO" },
-        { "provincia", "PROVINCIA" },
-        { "canton", "CANTON" },
-        { "parroquia", "PARROQUIA" }
+        { "cliente",          "CLIENTE"          },
+        { "genero",           "GENERO"            },
+        { "tipo_cliente",     "TIPO_CLIENTE"      },
+        { "zona",             "ZONA"              },
+        { "tipo_persona",     "TIPO_PERSONA"      },
+        { "fecha_registro",   "FECHA_REGISTRO"    },
+        { "fecha_nacimiento", "FECHA_NACIMIENTO"  },
+        { "provincia",        "PROVINCIA"         },
+        { "canton",           "CANTON"            },
+        { "parroquia",        "PARROQUIA"         }
     };
 
     [McpServerTool(Name = "clientes")]
@@ -40,15 +41,17 @@ Devuelve los siguientes campos:
 - parroquia → Parroquia del cliente
 
 CAPACIDADES AVANZADAS:
-- **Agrupación múltiple**: Agrupa por varias columnas simultáneamente
-- **Cláusulas HAVING**: Filtra grupos después de la agrupación
-- **Análisis multidimensional**: Combina agrupación con filtros complejos
+- Agrupación múltiple: agrupa por varias columnas simultáneamente
+- Cláusulas HAVING: filtra grupos después de la agrupación
+- Múltiples agregaciones: varias operaciones simultáneas (SUM, COUNT, AVG, MAX, MIN)
+- DISTINCT: valores únicos (distinct: true + seleccionar_columnas)
+- Campos calculados: expresiones SQL personalizadas
 
 IMPORTANTE:
-- Para contar el total de clientes, usa agregacion con operacion ""COUNT"" y columna ""cliente""
+- Para contar el total de clientes: agregaciones: [{operacion: ""COUNT"", columna: ""cliente""}]
 - NO uses el parámetro cantidad para contar registros - solo para limitar resultados
 - Si no especificas cantidad, se devolverán hasta 100 registros (si no hay agregación)
-- **USA TODA LA INFORMACIÓN DEVUELTA**: Cuando la herramienta devuelve múltiples clientes, analiza y menciona TODOS los datos disponibles.
+- USA TODA LA INFORMACIÓN DEVUELTA: analiza y menciona TODOS los datos disponibles
 
 Parámetros disponibles:
 - pagina: número de página
@@ -57,40 +60,44 @@ Parámetros disponibles:
 - orden: orden de los resultados (ASC o DESC)
 - filtros: condiciones de búsqueda con soporte AND/OR
 - agrupacion: columna(s) por la cual agrupar - puede ser string o array
-- agregacion: operaciones de agregación (SUM, COUNT, AVG, MAX, MIN)
+- agregaciones: array de operaciones de agregación (SUM, COUNT, AVG, MAX, MIN)
 - having: condición para filtrar grupos después de la agrupación
+- distinct: true para valores únicos (combinar con seleccionar_columnas)
+- campos_calculados: expresiones SQL personalizadas
+- seleccionar_columnas: lista de columnas específicas a retornar
 
 Ejemplos de uso avanzado:
-- ""¿Cuántos clientes tengo?"" → agregacion: {operacion: ""COUNT"", columna: ""cliente""}
+- ""¿Cuántos clientes tengo?"" → agregaciones: [{operacion: ""COUNT"", columna: ""cliente""}]
 - ""Dame los primeros 10 clientes"" → cantidad: 10
 - ""Agrupa clientes por provincia y canton"" → agrupacion: [""provincia"", ""canton""]
-- ""Provincias con más de 100 clientes"" → agrupacion: ""provincia"", agregacion: {operacion: ""COUNT"", columna: ""cliente""}, having: {columna: ""cliente"", operador: "">"", valor: 100}")]
+- ""Provincias con más de 100 clientes"" → agrupacion: ""provincia"", agregaciones: [{operacion: ""COUNT"", columna: ""cliente"", alias: ""total""}], having: {columna: ""cliente"", operador: "">"", valor: 100}
+- ""¿Qué zonas únicas hay?"" → distinct: true, seleccionar_columnas: [""zona""]")]
     public static async Task<object> ConsultarClientesAsync(
-        [Description("Parámetros de búsqueda, filtros, paginación y agrupaciones")] ClientesRequest request)
+        [Description("Parámetros de búsqueda, filtros, paginación, agrupaciones y campos calculados")] ClientesRequest request)
     {
         try
         {
             var resultados = await EjecutarConsultaClientes(request);
-            
+
             if (resultados.Count == 0)
             {
-                return new 
-                { 
-                    success = true, 
-                    dataType = "empty_result", 
-                    message = "No se encontraron clientes que coincidan con los criterios de búsqueda.", 
+                return new
+                {
+                    success = true,
+                    dataType = "empty_result",
+                    message = "No se encontraron clientes que coincidan con los criterios de búsqueda.",
                     data = resultados,
                     suggestion = "Intente con diferentes criterios de búsqueda o verifique los filtros."
                 };
             }
-            
-            return new 
-            { 
-                success = true, 
-                dataType = "data_found", 
-                message = $"Se encontraron {resultados.Count} cliente(s).", 
-                data = resultados, 
-                count = resultados.Count 
+
+            return new
+            {
+                success = true,
+                dataType = "data_found",
+                message = $"Se encontraron {resultados.Count} cliente(s).",
+                data = resultados,
+                count = resultados.Count
             };
         }
         catch (MySqlException sqlEx)
@@ -107,7 +114,7 @@ Ejemplos de uso avanzado:
                 1213 => "DATABASE_DEADLOCK",
                 _ => "DATABASE_ERROR"
             };
-            
+
             var suggestion = errorType switch
             {
                 "TABLE_NOT_FOUND" => "Verifique que la base de datos esté configurada correctamente y que la tabla exista.",
@@ -119,12 +126,12 @@ Ejemplos de uso avanzado:
                 "DATABASE_DEADLOCK" => "Espere unos momentos y vuelva a intentar la consulta.",
                 _ => "Error interno de la base de datos. Consulte los detalles para más información."
             };
-            
-            return new 
-            { 
-                success = false, 
-                error = true, 
-                errorType, 
+
+            return new
+            {
+                success = false,
+                error = true,
+                errorType,
                 message = "Error de base de datos.",
                 details = sqlEx.Message,
                 suggestion
@@ -133,13 +140,13 @@ Ejemplos de uso avanzado:
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR GENERAL clientes]: {ex.Message}");
-            return new 
-            { 
-                success = false, 
-                error = true, 
-                errorType = "WORKER_ERROR", 
-                message = "Error inesperado en el procesamiento.", 
-                details = ex.Message 
+            return new
+            {
+                success = false,
+                error = true,
+                errorType = "WORKER_ERROR",
+                message = "Error inesperado en el procesamiento.",
+                details = ex.Message
             };
         }
     }
@@ -179,56 +186,76 @@ Ejemplos de uso avanzado:
         }
 
         var groupByPart = agrupacionDbCols.Count > 0 ? string.Join(", ", agrupacionDbCols) : null;
+        bool hayAgregaciones = req.Agregaciones != null && req.Agregaciones.Length > 0;
+        bool haySeleccionarColumnas = req.SeleccionarColumnas != null && req.SeleccionarColumnas.Length > 0;
+        string distinctKeyword = req.Distinct ? "DISTINCT " : "";
 
         // ── SELECT dinámico ──
-        string selectPart;
-        string? agregacionAlias = null;
+        var selectParts = new List<string>();
 
-        if (req.Agregacion != null)
+        if (hayAgregaciones)
         {
-            var agregacionDbCol = ColumnMap.GetValueOrDefault(req.Agregacion.Columna.ToLower(), req.Agregacion.Columna.ToUpper());
-            agregacionAlias = !string.IsNullOrEmpty(req.Agregacion.Alias) 
-                ? req.Agregacion.Alias 
-                : $"{req.Agregacion.Operacion}_{req.Agregacion.Columna}";
-
             if (!string.IsNullOrEmpty(groupByPart))
             {
-                selectPart = $"{groupByPart}, {req.Agregacion.Operacion}({agregacionDbCol}) AS {agregacionAlias}";
+                for (int i = 0; i < agrupacionDbCols.Count; i++)
+                    selectParts.Add($"{agrupacionDbCols[i]} AS {agrupacionFriendlyCols[i]}");
             }
-            else
+
+            foreach (var agg in req.Agregaciones!)
             {
-                selectPart = $"{req.Agregacion.Operacion}({agregacionDbCol}) AS {agregacionAlias}";
+                var colDB = ColumnMap.GetValueOrDefault(agg.Columna.ToLower(), agg.Columna.ToUpper());
+                var alias = !string.IsNullOrEmpty(agg.Alias) ? agg.Alias : $"{agg.Operacion}_{agg.Columna}";
+                selectParts.Add($"{agg.Operacion}({colDB}) AS {alias}");
+            }
+        }
+        else if (haySeleccionarColumnas)
+        {
+            foreach (var col in req.SeleccionarColumnas!)
+            {
+                var dbCol = ColumnMap.GetValueOrDefault(col.ToLower(), col.ToUpper());
+                selectParts.Add($"{dbCol} AS {col}");
             }
         }
         else
         {
-            selectPart = "CLIENTE, GENERO, TIPO_CLIENTE, ZONA, TIPO_PERSONA, FECHA_REGISTRO, FECHA_NACIMIENTO, PROVINCIA, CANTON, PARROQUIA";
+            selectParts.Add("CLIENTE, GENERO, TIPO_CLIENTE, ZONA, TIPO_PERSONA, FECHA_REGISTRO, FECHA_NACIMIENTO, PROVINCIA, CANTON, PARROQUIA");
         }
 
-        string sql = $"SELECT {selectPart} FROM vista_ia_clientes";
+        // Campos calculados
+        if (req.CamposCalculados != null && req.CamposCalculados.Length > 0)
+        {
+            foreach (var campo in req.CamposCalculados)
+            {
+                string expresion = campo.Expresion;
+                foreach (var kv in ColumnMap.OrderByDescending(x => x.Key.Length))
+                {
+                    string pattern = $@"\b{Regex.Escape(kv.Key)}\b";
+                    expresion = Regex.Replace(expresion, pattern, kv.Value, RegexOptions.IgnoreCase);
+                }
+                selectParts.Add($"{expresion} AS {campo.Alias}");
+            }
+        }
+
+        string selectPart = string.Join(", ", selectParts);
+        string sql = $"SELECT {distinctKeyword}{selectPart} FROM vista_ia_clientes";
 
         // ── WHERE ──
         if (req.Filtros.HasValue)
         {
             string whereClause = SqlUtils.BuildWhereClause(req.Filtros.Value, command, ColumnMap, ref paramCounter);
             if (!string.IsNullOrEmpty(whereClause))
-            {
                 sql += $" WHERE {whereClause}";
-            }
         }
 
         // ── GROUP BY ──
         if (!string.IsNullOrEmpty(groupByPart))
-        {
             sql += $" GROUP BY {groupByPart}";
-        }
 
         // ── HAVING ──
         if (req.Having != null && !string.IsNullOrEmpty(groupByPart))
         {
             var havingDbCol = ColumnMap.GetValueOrDefault(req.Having.Columna.ToLower(), req.Having.Columna.ToUpper());
             var havingOp = req.Having.Operador.ToUpper();
-
             string? havingClause = null;
 
             switch (havingOp)
@@ -273,9 +300,7 @@ Ejemplos de uso avanzado:
                         var p = $"@h{paramCounter++}";
                         var valorObj = GetJsonValue(req.Having.Valor.Value);
                         if (havingOp == "LIKE" && valorObj is string strVal && !strVal.Contains("%"))
-                        {
                             valorObj = $"%{strVal}%";
-                        }
                         command.Parameters.AddWithValue(p, valorObj);
                         havingClause = $"{havingDbCol} {havingOp} {p}";
                     }
@@ -283,9 +308,7 @@ Ejemplos de uso avanzado:
             }
 
             if (!string.IsNullOrEmpty(havingClause))
-            {
                 sql += $" HAVING {havingClause}";
-            }
         }
 
         // ── ORDER BY ──
@@ -293,12 +316,10 @@ Ejemplos de uso avanzado:
         var ordenSeguro = req.Orden.ToUpper() == "ASC" ? "ASC" : "DESC";
         sql += $" ORDER BY {dbColumnaOrden} {ordenSeguro}";
 
-        // ── LIMIT / OFFSET ──
-        // Sin agregación: siempre paginar (100 por defecto si no viene cantidad)
-        bool aplicarLimit = req.Agregacion == null;
-        if (aplicarLimit)
+        // ── LIMIT / OFFSET (solo sin agregaciones) ──
+        if (!hayAgregaciones)
         {
-            var limit = req.Cantidad ?? 100;
+            var limit = req.Cantidad ?? Config.CantidadPorDefecto;
             sql += " LIMIT @limit OFFSET @offset";
             command.Parameters.AddWithValue("@limit", limit);
             command.Parameters.AddWithValue("@offset", (req.Pagina - 1) * limit);
@@ -308,9 +329,7 @@ Ejemplos de uso avanzado:
 
         Console.WriteLine($"[QUERY CLIENTES EJECUTADO]: {sql}");
         foreach (MySqlParameter p in command.Parameters)
-        {
             Console.WriteLine($"  {p.ParameterName} = {p.Value}");
-        }
 
         // ── Ejecutar y mapear resultados ──
         var resultados = new List<Dictionary<string, object>>();
@@ -319,47 +338,20 @@ Ejemplos de uso avanzado:
         while (await reader.ReadAsync())
         {
             var fila = new Dictionary<string, object>();
-
-            if (req.Agregacion != null)
+            for (int i = 0; i < reader.FieldCount; i++)
             {
-                // Columnas de agrupación con nombres amigables
-                for (int i = 0; i < agrupacionFriendlyCols.Count; i++)
-                {
-                    var friendly = agrupacionFriendlyCols[i];
-                    var dbCol = agrupacionDbCols[i];
-                    var ordinal = reader.GetOrdinal(dbCol);
-                    fila[friendly] = reader.IsDBNull(ordinal) ? null! : reader.GetValue(ordinal);
-                }
-
-                // Valor agregado
-                var alias = agregacionAlias!;
-                var aggOrdinal = reader.GetOrdinal(alias);
-                fila[alias] = reader.IsDBNull(aggOrdinal) ? null! : reader.GetValue(aggOrdinal);
+                string alias = reader.GetName(i);
+                var value = reader.IsDBNull(i) ? null! : reader.GetValue(i);
+                if (value is DateTime dt)
+                    value = dt.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+                fila[alias] = value;
             }
-            else
-            {
-                for (int i = 0; i < reader.FieldCount; i++)
-                {
-                    string dbName = reader.GetName(i);
-                    string nombreAmigable = ColumnMap.FirstOrDefault(x => x.Value.Equals(dbName, StringComparison.OrdinalIgnoreCase)).Key ?? dbName;
-
-                    var value = reader.IsDBNull(i) ? null! : reader.GetValue(i);
-                    
-                    // Normalizar fechas a ISO 8601
-                    if (value is DateTime dt)
-                        value = dt.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
-
-                    fila[nombreAmigable] = value;
-                }
-            }
-
             resultados.Add(fila);
         }
 
         return resultados;
     }
 
-    // Helper local (duplicado de SqlUtils para no modificar archivo existente)
     private static object GetJsonValue(JsonElement element)
     {
         return element.ValueKind switch

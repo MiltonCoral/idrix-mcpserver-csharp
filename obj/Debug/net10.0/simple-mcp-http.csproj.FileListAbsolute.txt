@@ -35,3 +35,4 @@
 /home/milton/Desktop/idrixcsharp/simple-mcp-http/obj/Debug/net10.0/ref/simple-mcp-http.dll
 /home/milton/Desktop/idrixcsharp/simple-mcp-http/bin/Debug/net10.0/simple-mcp-http.staticwebassets.runtime.json
 /home/milton/Desktop/idrixcsharp/simple-mcp-http/obj/Debug/net10.0/compressed/2g0tdj21kr-{0}-43d9rsalj2-43d9rsalj2.gz
+/home/milton/Desktop/idrixcsharp/simple-mcp-http/obj/Debug/net10.0/simple-mcp-http.sourcelink.json

@@ -9,67 +9,70 @@ using SimpleMcpHttpServer.Utils;
 namespace SimpleMcpHttpServer.Tools;
 
 [McpServerToolType]
-public static class CuentasXCobrarTools
+public static class VentasTools
 {
     public static readonly Dictionary<string, string> ColumnMap = new(StringComparer.OrdinalIgnoreCase)
     {
-        { "numero_documento",     "FACTURA"           },
-        { "fecha_factura",        "DOCU_FECFAC"       },
-        { "total_factura",        "DOCU_TOTALX"       },
-        { "tipo_documento",       "DOCU_TIPOXX"       },
-        { "total_pagado",         "DOCU_TOTPAG"       },
-        { "abono",                "DOCU_ABONOX"       },
-        { "valor_extra_1",        "DOCU_VALOR2"       },
-        { "valor_extra_2",        "DOCU_VALOR3"       },
-        { "saldo_pendiente",      "DOCU_SALDOX"       },
-        { "fecha_cobro",          "DOCU_FECHACOBRO"   },
-        { "forma_pago_1",         "DOCU_FORPAG"       },
-        { "forma_pago_2",         "DOCU_FORPAG2"      },
-        { "forma_pago_3",         "DOCU_FORPAG3"      },
-        { "estado_documento",     "DOCU_ESTADO"       },
-        { "estado_cuenta",        "ESTADO_CUENTA"     },
-        { "cedula_cliente",       "CLIE_IDENTI"       },
-        { "razon_social",         "CLIE_RAZONS"       },
-        { "nombre_comercial",     "CLIE_NOMCOM"       },
-        { "canal_venta",          "DOCU_CANALV"       },
-        { "nombre_colaborador",   "COLA_NOMBRE"       },
-        { "apellido_colaborador", "COLA_APELLI"       }
+        { "fecha",                    "FECHA"                         },
+        { "tipo_documento",           "TIPO_DOCUMENTO"                },
+        { "numero_documento",         "NUMERO_DOCUMENTO"              },
+        { "cliente_nombre",           "CLIENTE_NOMBRE"                },
+        { "mes",                      "MES"                           },
+        { "semana",                   "SEMANA"                        },
+        { "numero_nota_credito",      "NUMERO_NOTA_CREDITO"           },
+        { "prod_codigo",              "PROD_CODIGO"                   },
+        { "prod_codpro",              "PROD_CODPRO"                   },
+        { "producto",                 "DESCRIPCION_PRODUCTO"          },
+        { "tipo_producto",            "TIPO_PRODUCTO_SERVICIO"        },
+        { "vendedor",                 "VENDEDOR"                      },
+        { "familia",                  "FAMILIA"                       },
+        { "unidades_vendidas",        "UNIDADES_VENDIDAS"             },
+        { "costo_unitario",           "COSTO_UNITARIO"                },
+        { "precio_venta_unitario",    "PRECIO_VENTA_UNITARIO"         },
+        { "total_sin_iva",            "TOTAL_SIN_IVA"                 },
+        { "total_neto",               "TOTAL_NETO"                    },
+        { "pais",                     "PAIS"                          },
+        { "provincia",                "PROVINCIA"                     },
+        { "canton",                   "CANTON"                        },
+        { "observacion_nc",           "OBSERVACION_NC"                }
     };
 
-    [McpServerTool(Name = "cuentasXCobrar")]
-    [Description(@"Esta herramienta obtiene información de cuentas por cobrar con soporte avanzado de paginación, filtros, ordenamiento, agrupaciones, agregaciones, HAVING y DISTINCT.
+    [McpServerTool(Name = "ventas")]
+    [Description(@"Esta herramienta obtiene un resumen de ventas con soporte avanzado de paginación, filtros, ordenamiento, agregaciones y agrupaciones complejas.
 
 Devuelve los siguientes campos:
-- numero_documento: Número de documento de factura
-- fecha_factura: Fecha de la factura emitida
-- total_factura: Total de pago
-- tipo_documento: Tipo de documento
-- total_pagado: Total que ha realizado el pago
-- abono: Cantidad de abono realizado
-- valor_extra_1: Valor extra 1
-- valor_extra_2: Valor extra 2
-- saldo_pendiente: Saldo pendiente por pagar
-- fecha_cobro: Fecha de cobro
-- forma_pago_1/2/3: Formas de pago
-- estado_documento: EMITIDA, ANULADO, ABONADA, PAGADA
-- estado_cuenta: PENDIENTE, VENCIDA, COBRADA
-- cedula_cliente: Cédula del cliente
-- razon_social: Nombre del cliente / razón social
-- nombre_comercial: Nombre comercial
-- canal_venta: VENTA DIRECTA, VENTA MOSTRADOR, VENTA TELEFONICA, VENTA INTERNET
-- nombre_colaborador / apellido_colaborador: Cobrador
+- fecha → Fecha de la venta
+- tipo_documento → Tipo de documento (factura, nota de crédito, etc.)
+- numero_documento → Número del documento
+- cliente_nombre → Nombre del cliente
+- mes → Mes de la venta
+- semana → Semana de la venta
+- numero_nota_credito → Número de nota de crédito (si aplica)
+- prod_codigo / prod_codpro → Códigos del producto
+- producto → Nombre del producto (usar LIKE para buscar)
+- tipo_producto → Tipo de producto o servicio
+- vendedor → Nombre del vendedor
+- familia → Familia del producto
+- unidades_vendidas → Cantidad de unidades vendidas
+- costo_unitario / precio_venta_unitario → Precios
+- total_sin_iva / total_neto → Totales
+- pais / provincia / canton → Ubicación
+- observacion_nc → Observaciones de nota de crédito
 
 CAPACIDADES AVANZADAS:
 - Agrupación múltiple: agrupa por varias columnas simultáneamente
 - Cláusulas HAVING: filtra grupos después de la agrupación
 - Múltiples agregaciones: varias operaciones simultáneas (SUM, COUNT, AVG, MAX, MIN)
 - DISTINCT: valores únicos (distinct: true + seleccionar_columnas)
-- Campos calculados: expresiones SQL personalizadas
+- Campos calculados: expresiones SQL personalizadas (YEAR(), MONTH(), CASE WHEN, etc.)
+- Selección específica: lista de columnas a retornar
 
 IMPORTANTE:
-- Para contar el total de cuentas: agregaciones: [{operacion: ""COUNT"", columna: ""numero_documento""}]
+- Para contar el total de ventas: agregaciones: [{operacion: ""COUNT"", columna: ""fecha""}]
 - NO uses el parámetro cantidad para contar registros - solo para limitar resultados
 - Si no especificas cantidad, se devolverán hasta 100 registros (si no hay agregación)
+- USA TODA LA INFORMACIÓN DEVUELTA: analiza y menciona TODOS los datos disponibles
+- EXPLORAR DATOS: usa distinct: true + seleccionar_columnas para ver valores únicos disponibles
 
 Parámetros disponibles:
 - pagina, cantidad, columna, orden
@@ -81,17 +84,20 @@ Parámetros disponibles:
 - campos_calculados: [{expresion, alias}]
 - seleccionar_columnas: [""col1"", ""col2""]
 
-Ejemplos:
-- ""¿Cuántas cuentas por cobrar?"" → agregaciones: [{operacion: ""COUNT"", columna: ""numero_documento""}]
-- ""Total saldo por canal"" → agrupacion: ""canal_venta"", agregaciones: [{operacion: ""SUM"", columna: ""saldo_pendiente"", alias: ""total_saldo""}]
-- ""Canales con saldo > 10000"" → agrupacion: ""canal_venta"", agregaciones: [{operacion: ""SUM"", columna: ""saldo_pendiente"", alias: ""total""}], having: {columna: ""saldo_pendiente"", operador: "">"", valor: 10000}
-- ""¿Qué estados de cuenta existen?"" → distinct: true, seleccionar_columnas: [""estado_cuenta""]")]
-    public static async Task<object> ConsultarCuentasXCobrarAsync(
-        [Description("Parámetros de búsqueda, filtros, paginación, agrupaciones y campos calculados")] CuentasXCobrarRequest request)
+Ejemplos de uso avanzado:
+- ""¿Cuántas ventas tengo?"" → agregaciones: [{operacion: ""COUNT"", columna: ""fecha""}]
+- ""Dame las primeras 10 ventas"" → cantidad: 10
+- ""Agrupa ventas por vendedor y mes"" → agrupacion: [""vendedor"", ""mes""]
+- ""Vendedores con más de 100 ventas"" → agrupacion: ""vendedor"", agregaciones: [{operacion: ""COUNT"", columna: ""fecha"", alias: ""total""}], having: {columna: ""fecha"", operador: "">"", valor: 100}
+- ""¿Qué productos únicos hay?"" → distinct: true, seleccionar_columnas: [""producto""]
+- ""¿Qué vendedores únicos hay?"" → distinct: true, seleccionar_columnas: [""vendedor""]
+- ""Análisis mensual"" → campos_calculados: [{expresion: ""YEAR(fecha)"", alias: ""anio""}, {expresion: ""MONTH(fecha)"", alias: ""mes""}], agrupacion: [""anio"", ""mes""], agregaciones: [{operacion: ""SUM"", columna: ""total_neto"", alias: ""total""}]")]
+    public static async Task<object> ConsultarVentasAsync(
+        [Description("Parámetros de búsqueda, filtros, paginación, agrupaciones y campos calculados")] VentasRequest request)
     {
         try
         {
-            var resultados = await EjecutarConsultaCuentasXCobrar(request);
+            var resultados = await EjecutarConsultaVentas(request);
 
             if (resultados.Count == 0)
             {
@@ -99,9 +105,9 @@ Ejemplos:
                 {
                     success = true,
                     dataType = "empty_result",
-                    message = "No se encontraron registros que coincidan con los criterios de búsqueda.",
+                    message = "No se encontraron ventas que coincidan con los criterios de búsqueda.",
                     data = resultados,
-                    suggestion = "Intente con diferentes criterios de búsqueda o verifique los filtros."
+                    suggestion = "SUGERENCIA: Si buscas por nombre específico (producto, vendedor, cliente), usa distinct: true + seleccionar_columnas para explorar los valores disponibles."
                 };
             }
 
@@ -109,14 +115,14 @@ Ejemplos:
             {
                 success = true,
                 dataType = "data_found",
-                message = $"Se encontraron {resultados.Count} registro(s).",
+                message = $"Se encontraron {resultados.Count} resultado(s).",
                 data = resultados,
                 count = resultados.Count
             };
         }
         catch (MySqlException sqlEx)
         {
-            Console.WriteLine($"[ERROR MYSQL cuentasXCobrar]: {sqlEx.Message}");
+            Console.WriteLine($"[ERROR MYSQL ventas]: {sqlEx.Message}");
             var errorType = sqlEx.Number switch
             {
                 1146 => "TABLE_NOT_FOUND",
@@ -153,7 +159,7 @@ Ejemplos:
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR GENERAL cuentasXCobrar]: {ex.Message}");
+            Console.WriteLine($"[ERROR GENERAL ventas]: {ex.Message}");
             return new
             {
                 success = false,
@@ -165,7 +171,7 @@ Ejemplos:
         }
     }
 
-    private static async Task<List<Dictionary<string, object>>> EjecutarConsultaCuentasXCobrar(CuentasXCobrarRequest req)
+    private static async Task<List<Dictionary<string, object>>> EjecutarConsultaVentas(VentasRequest req)
     {
         using var connection = new MySqlConnection(Config.ConnectionString);
         await connection.OpenAsync();
@@ -252,7 +258,7 @@ Ejemplos:
         }
 
         string selectPart = string.Join(", ", selectParts);
-        string sql = $"SELECT {distinctKeyword}{selectPart} FROM vista_tesoreria_cuentasxcobrar";
+        string sql = $"SELECT {distinctKeyword}{selectPart} FROM vista_reportes_resumen_ventas_productos";
 
         // ── WHERE ──
         if (req.Filtros.HasValue)
@@ -342,7 +348,7 @@ Ejemplos:
 
         command.CommandText = sql;
 
-        Console.WriteLine($"[QUERY CUENTASXCOBRAR EJECUTADO]: {sql}");
+        Console.WriteLine($"[QUERY VENTAS EJECUTADO]: {sql}");
         foreach (MySqlParameter p in command.Parameters)
             Console.WriteLine($"  {p.ParameterName} = {p.Value}");
 
