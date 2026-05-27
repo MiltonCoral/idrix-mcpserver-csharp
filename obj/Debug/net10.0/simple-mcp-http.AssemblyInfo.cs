@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("simple-mcp-http")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f59f7eafd69e5b74b9d3dcef46248f509aa7e80c")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d491648adca9133721b7bd83ea5d1392efba05a8")]
 [assembly: System.Reflection.AssemblyProductAttribute("simple-mcp-http")]
 [assembly: System.Reflection.AssemblyTitleAttribute("simple-mcp-http")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

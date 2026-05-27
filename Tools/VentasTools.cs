@@ -23,7 +23,6 @@ public static class VentasTools
         { "prod_codigo",              "PROD_CODIGO"                   },
         { "prod_codpro",              "PROD_CODPRO"                   },
         { "producto",                 "DESCRIPCION_PRODUCTO"          },
-        { "tipo_producto",            "TIPO_PRODUCTO_SERVICIO"        },
         { "vendedor",                 "VENDEDOR"                      },
         { "familia",                  "FAMILIA"                       },
         { "unidades_vendidas",        "UNIDADES_VENDIDAS"             },
